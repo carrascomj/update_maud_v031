@@ -1,10 +1,11 @@
 """Script to transform Maud model to the current version."""
+import json
 from typing import Optional
 
+import click
+import maud.data_model.kinetic_model as md
 import toml
 from pydantic import BaseModel, Field
-
-import data_model as fd
 
 
 class Compartment(BaseModel):
@@ -61,13 +62,13 @@ class ModelPrev(BaseModel):
 
 class ModelNew(BaseModel):
     compartment: list[Compartment]
-    reaction: list[fd.Reaction]
-    enzyme: list[fd.Enzyme]
-    enzyme_reaction: list[fd.EnzymeReaction]
-    metabolite: list[fd.Metabolite]
-    metabolite_in_compartment: list[fd.MetaboliteInCompartment]
-    allostery: list[fd.Allostery]
-    competitive_inhibition: list[fd.CompetitiveInhibition]
+    reaction: list[md.Reaction]
+    enzyme: list[md.Enzyme]
+    enzyme_reaction: list[md.EnzymeReaction]
+    metabolite: list[md.Metabolite]
+    metabolite_in_compartment: list[md.MetaboliteInCompartment]
+    allostery: list[md.Allostery]
+    competitive_inhibition: list[md.CompetitiveInhibition]
 
 
 def update_model(old_model: ModelPrev) -> ModelNew:
@@ -79,13 +80,13 @@ def update_model(old_model: ModelPrev) -> ModelNew:
     comp_inhibitions = []
     for reac in old_model.reaction:
         mechanism = (
-            fd.ReactionMechanism.REVERSIBLE_MICHAELIS_MENTEN
+            md.ReactionMechanism.REVERSIBLE_MICHAELIS_MENTEN
             if reac.reaction_mechanism.startswith("reversible")
-            else fd.ReactionMechanism.IRREVERSIBLE_MICHAELIS_MENTEN
+            else md.ReactionMechanism.IRREVERSIBLE_MICHAELIS_MENTEN
         )
         reac_id = reac.id.replace("_", "")
         reactions.append(
-            fd.Reaction(
+            md.Reaction(
                 id=reac_id,
                 name=reac.name,
                 mechanism=mechanism,
@@ -96,15 +97,15 @@ def update_model(old_model: ModelPrev) -> ModelNew:
         )
         for enz in reac.enzyme:
             enz_id = enz.id.replace("_", "")
-            enzymes.append(fd.Enzyme(id=enz_id, name=enz.name, subunits=enz.subunits))
+            enzymes.append(md.Enzyme(id=enz_id, name=enz.name, subunits=enz.subunits))
             enzyme_reactions.append(
-                fd.EnzymeReaction(enzyme_id=enz_id, reaction_id=reac_id)
+                md.EnzymeReaction(enzyme_id=enz_id, reaction_id=reac_id)
             )
             if enz.modifier is not None:
                 for modifier in enz.modifier:
                     if modifier.modifier_type == "competitive_inhibitor":
                         comp_inhibitions.append(
-                            fd.CompetitiveInhibition(
+                            md.CompetitiveInhibition(
                                 enzyme_id=enz_id,
                                 reaction_id=reac_id,
                                 metabolite_id=modifier.mic_id,
@@ -113,12 +114,12 @@ def update_model(old_model: ModelPrev) -> ModelNew:
                         )
                     else:
                         mod_type = (
-                            fd.ModificationType.INHIBITION
+                            md.ModificationType.INHIBITION
                             if modifier.modifier_type == "allosteric_inhibitor"
-                            else fd.ModificationType.ACTIVATION
+                            else md.ModificationType.ACTIVATION
                         )
                         allosteries.append(
-                            fd.Allostery(
+                            md.Allostery(
                                 enzyme_id=enz_id,
                                 metabolite_id=modifier.mic_id,
                                 compartment="c",
@@ -130,10 +131,10 @@ def update_model(old_model: ModelPrev) -> ModelNew:
     for met in old_model.metabolite:
         met_id = met.id.replace("_", "")
         metabolites.append(
-            fd.Metabolite(id=met_id, name=met.name, inchi_key=met.inchi_key)
+            md.Metabolite(id=met_id, name=met.name, inchi_key=met.inchi_key)
         )
         comp_metabolites.append(
-            fd.MetaboliteInCompartment(
+            md.MetaboliteInCompartment(
                 metabolite_id=met_id,
                 compartment_id=met.compartment,
                 balanced=met.balanced,
@@ -152,11 +153,13 @@ def update_model(old_model: ModelPrev) -> ModelNew:
 
 
 def write_new_model(model: ModelNew, out_file: str):
+    """Serialize a model into toml.
+
+    The intermediate JSON step is required so that dataclasses are
+    serialized properly.
+    """
     with open(out_file, "w") as f:
-        toml.dump(
-            model.dict(),
-            f,
-        )
+        toml.dump(json.loads(model.json()), f)
 
 
 def read_old_maud(toml_file: str):
@@ -165,7 +168,15 @@ def read_old_maud(toml_file: str):
     return data
 
 
-if __name__ == "__main__":
-    data = read_old_maud("/home/georg/models/kinetic_cauto.git/trunk/data/cauto.toml")
+@click.command()
+@click.argument("old_toml", type=click.Path(exists=True, dir_okay=False))
+@click.argument("output", type=click.Path(dir_okay=False))
+def cli_entry(old_toml: click.Path, output: click.Path):
+    data = read_old_maud(old_toml)
     new_data = update_model(data)
-    write_new_model(new_data, "model.toml")
+    print(new_data.json())
+    write_new_model(new_data, output)
+
+
+if __name__ == "__main__":
+    cli_entry()
