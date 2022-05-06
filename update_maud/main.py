@@ -8,8 +8,8 @@ import pandas as pd
 import toml
 from maud.data_model.maud_config import ODEConfig
 
-from update_model_toml import ModelNew, update_model_toml
-from update_priors import update_priors
+from .update_model_toml import update_model_toml
+from .update_priors import update_priors
 
 
 def rename_keys(dict_: dict, key_map: dict) -> dict:

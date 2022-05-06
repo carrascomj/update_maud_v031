@@ -1,12 +1,10 @@
 """Update priors file to newer maud impl."""
 
-import sys
-
 import click
 import pandas as pd
 import toml
 
-from update_model_toml import UNDER_PAT, ModelNew
+from .update_model_toml import UNDER_PAT, ModelNew
 
 NEW_PRIOR_COLS = ["parameter", "row_id", "col_id", "location", "scale", "pct1", "pct99"]
 
