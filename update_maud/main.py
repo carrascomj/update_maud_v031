@@ -50,6 +50,9 @@ def update_config(old_config: Path, new_config: Path):
 def update_measurements(old_measurements: Path, new_measurements: Path):
     df = pd.read_csv(old_measurements)
     df.experiment_id = df.experiment_id.str.replace("_", "")
+    df.loc[df.measurement_type == "flux", "target_id"] = df.loc[
+        df.measurement_type == "flux", "target_id"
+    ].str.replace("_", "")
     df.to_csv(new_measurements, index=False)
 
 

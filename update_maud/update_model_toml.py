@@ -57,7 +57,7 @@ class ModelPrev(BaseModel):
     compartment: list[Compartment]
     reaction: list[ReactionPrev]
     metabolite: list[MetabolitePrev] = Field(alias="metabolite-in-compartment")
-    drain: list[DrainPrev]
+    drain: Optional[list[DrainPrev]] = None
 
     class Config:
         allow_population_by_field_name = True
@@ -115,7 +115,7 @@ def update_model(old_model: ModelPrev) -> ModelNew:
                             md.CompetitiveInhibition(
                                 enzyme_id=enz_id,
                                 reaction_id=reac_id,
-                                metabolite_id=modifier.mic_id[:-2],
+                                metabolite_id=modifier.mic_id[:-2].replace("_", ""),
                                 compartment_id="c",
                             )
                         )
@@ -128,8 +128,8 @@ def update_model(old_model: ModelPrev) -> ModelNew:
                         allosteries.append(
                             md.Allostery(
                                 enzyme_id=enz_id,
-                                metabolite_id=modifier.mic_id[:-2],
-                                compartment="c",
+                                metabolite_id=modifier.mic_id[:-2].replace("_", ""),
+                                compartment_id="c",
                                 modification_type=mod_type,
                             )
                         )
@@ -172,6 +172,8 @@ def exclude_id(model: BaseModel, keys: list[str]):
 def reaction_mech_to_name(model: dict):
     for reac in model["reaction"]:
         reac["mechanism"] = md.ReactionMechanism(reac["mechanism"]).name
+    for allostery in model["allostery"]:
+        allostery["modification_type"] = md.ModificationType(allostery["modification_type"]).name
 
 
 def write_new_model(model: ModelNew, out_file: str):

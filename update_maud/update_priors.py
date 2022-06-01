@@ -69,10 +69,11 @@ def update_priors(priors_df: pd.DataFrame, model: ModelNew) -> pd.DataFrame:
         + df.loc[df.parameter == "ki", "mic_id"]
     )
     # transfer and dissociation constants; phosphorilation
-    dissociation_constants = df[df.parameter == "dissociation_constant"]
-    df.loc[df.parameter == "dissociation_constant", "row_id"] = (
+    dissociation_constants = df[df.parameter == "diss_t"]
+    df.loc[df.parameter == "diss_t", "row_id"] = (
         dissociation_constants.enzyme_id + "_" + dissociation_constants.mic_id
     )
+    df.parameter = df.parameter.str.replace("diss_t", "dissociation_constant")
     df.loc[df.parameter.isin(["transfer_constant", "kcat_phos"]), "row_id"] = df.loc[
         df.parameter.isin(["transfer_constant", "kcat_phos"]), "enzyme_id"
     ]
