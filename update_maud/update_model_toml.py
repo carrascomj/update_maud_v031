@@ -40,7 +40,7 @@ class EnzymePrev(BaseModel):
 class ReactionPrev(BaseModel):
     id: str
     name: str
-    reaction_mechanism: Optional[str] = "reversible_modular_rate_law"
+    mechanism: Optional[str] = "reversible_modular_rate_law"
     stoichiometry: dict[str, float]
     enzyme: list[EnzymePrev]
     water_stoichiometry: float = 0
@@ -86,7 +86,7 @@ def update_model(old_model: ModelPrev) -> ModelNew:
     for reac in old_model.reaction:
         mechanism = (
             md.ReactionMechanism.REVERSIBLE_MICHAELIS_MENTEN
-            if reac.reaction_mechanism.startswith("reversible")
+            if reac.mechanism.startswith("reversible")
             else md.ReactionMechanism.IRREVERSIBLE_MICHAELIS_MENTEN
         )
         reac_id = reac.id.replace("_", "")
