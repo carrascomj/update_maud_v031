@@ -9,6 +9,7 @@ import toml
 
 from .update_model_toml import UNDER_PAT, ModelNew
 
+
 NEW_PRIOR_COLS = [
     "parameter",
     "metabolite",
@@ -22,7 +23,7 @@ NEW_PRIOR_COLS = [
     "pct99",
 ]
 # the comparment is represented by a single letter,
-# prefixed by underscored at the end of the entity. 
+# prefixed by underscored at the end of the entity.
 COMP_PAT = re.compile(r"(.*)_([a-z]$)")
 
 

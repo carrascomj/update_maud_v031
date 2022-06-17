@@ -69,10 +69,10 @@ def update_biological_config(old_toml: Path, new_toml: Path):
         toml.dump(config, f)
 
 
-def update_dgf(config, data_path: Path, out_path: Path): 
+def update_dgf(config, data_path: Path, out_path: Path):
     """Remove all underscores in identifiers in dgf files."""
-    mean_path =  config["dgf_mean_file"]
-    cov_path =  config["dgf_covariance_file"]
+    mean_path = config["dgf_mean_file"]
+    cov_path = config["dgf_covariance_file"]
     means = pd.read_csv(data_path / mean_path)
     cov = pd.read_csv(data_path / cov_path)
     means.metabolite = means.metabolite.str.replace("_", "")

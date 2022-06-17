@@ -8,6 +8,7 @@ import maud.data_model.kinetic_model as md
 import toml
 from pydantic import BaseModel, Field
 
+
 UNDER_PAT = re.compile(r"_(?![a-z]$)")
 
 
@@ -173,7 +174,9 @@ def reaction_mech_to_name(model: dict):
     for reac in model["reaction"]:
         reac["mechanism"] = md.ReactionMechanism(reac["mechanism"]).name
     for allostery in model["allostery"]:
-        allostery["modification_type"] = md.ModificationType(allostery["modification_type"]).name
+        allostery["modification_type"] = md.ModificationType(
+            allostery["modification_type"]
+        ).name
 
 
 def write_new_model(model: ModelNew, out_file: str):
