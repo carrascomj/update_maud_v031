@@ -69,16 +69,21 @@ def update_biological_config(old_toml: Path, new_toml: Path):
         toml.dump(config, f)
 
 
+def update_dgf(config, data_path: Path, out_path: Path): 
+    """Remove all underscores in identifiers in dgf files."""
+    mean_path =  config["dgf_mean_file"]
+    cov_path =  config["dgf_covariance_file"]
+    means = pd.read_csv(data_path / mean_path)
+    cov = pd.read_csv(data_path / cov_path)
+    means.metabolite = means.metabolite.str.replace("_", "")
+    cov.metabolite = cov.metabolite.str.replace("_", "")
+    cov.columns = cov.columns.str.replace("_", "")
+    means.to_csv(out_path / mean_path, index=False)
+    cov.to_csv(out_path / cov_path, index=False)
+
+
 def copy_unaffected_files(config: dict[str, str], data_path: Path, out_path: Path):
     """Copy to new location the files that are not affected by the update."""
-    if "dgf_mean_file" in config:
-        shutil.copy(
-            data_path / config["dgf_mean_file"], out_path / config["dgf_mean_file"]
-        )
-        shutil.copy(
-            data_path / config["dgf_covariance_file"],
-            out_path / config["dgf_covariance_file"],
-        )
     if "user_inits_file" in config:
         shutil.copy(
             data_path / config["user_inits_file"], out_path / config["user_inits_file"]
@@ -107,6 +112,8 @@ def cli_entry(data_dir: click.Path, outdir: click.Path):
     update_measurements(data_path / measurements_file, out_path / measurements_file)
     update_biological_config(data_path / bio_config_file, out_path / bio_config_file)
     update_config(data_path / "config.toml", out_path / "config.toml")
+    if "dgf_mean_file" in config:
+        update_dgf(config, data_path, out_path)
     copy_unaffected_files(config, data_path, out_path)
 
 
