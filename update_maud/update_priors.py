@@ -60,7 +60,7 @@ def is_valid_enzyme(enzyme_id: str, model: ModelNew):
 def update_priors(priors_df: pd.DataFrame, model: ModelNew) -> pd.DataFrame:
     df = priors_df.copy()
     target_cols = deepcopy(NEW_PRIOR_COLS)
-    df = df.rename(
+    df.rename(
         {
             "parameter_type": "parameter",
             "enzyme_id": "enzyme",
@@ -70,9 +70,10 @@ def update_priors(priors_df: pd.DataFrame, model: ModelNew) -> pd.DataFrame:
             "drain_id": "reaction",
         },
         axis=1,
+        inplace=True,
     )
     df["compartment"] = None
-    # comparment separation of metabolites
+    # compartment separation of metabolites
     df.loc[~pd.isna(df.metabolite), "compartment"] = df.loc[
         ~pd.isna(df.metabolite), "metabolite"
     ].apply(lambda x: COMP_PAT.sub(r"\2", x))
@@ -101,6 +102,47 @@ def update_priors(priors_df: pd.DataFrame, model: ModelNew) -> pd.DataFrame:
         raise NotImplementedError("Phosphorylation update is not implemented")
     # the previous steps are only succesful if this works
     df = df[target_cols]
+    return df
+
+
+def update_inits(inits_df: pd.DataFrame, model: ModelNew) -> pd.DataFrame:
+    """Update the generated inits to the new format."""
+    df = inits_df.copy()
+    df.loc[~pd.isna(df.drain_id), "parameter_name"] = "drain"
+    df.rename(
+        {
+            "parameter_name": "parameter",
+            "enzyme_id": "enzyme",
+            "experiment_id": "experiment",
+            # will fill out the other reactions later
+            "drain_id": "reaction",
+        },
+        axis=1,
+        inplace=True,
+    )
+    df["compartment"] = None
+    # compartment separation of metabolites
+    df.loc[~pd.isna(df.mic_id), "compartment"] = df.loc[
+        ~pd.isna(df.mic_id), "mic_id"
+    ].apply(lambda x: COMP_PAT.sub(r"\2", x))
+    df.loc[~pd.isna(df.mic_id), "mic_id"] = df.loc[~pd.isna(df.mic_id), "mic_id"].apply(
+        lambda x: COMP_PAT.sub(r"\1", x)
+    )
+    df = df.loc[
+        ~df.parameter.isin(["kcat", "conc_enzyme", "km"])
+        | df.enzyme.apply(lambda x: is_valid_enzyme(x, model)),
+        :,
+    ]
+    # add reaction ids
+    df.loc[df.parameter.isin(["kcat", "km", "ki"]), "reaction"] = df.loc[
+        df.parameter.isin(["kcat", "km", "ki"]), "enzyme"
+    ].apply(lambda x: query_lookup(x, model))
+    df.loc[~pd.isna(df.mic_id), "metabolite"] = df.loc[~pd.isna(df.mic_id), "mic_id"]
+    df.drop("mic_id", axis=1, inplace=True)
+    # remove underscores
+    df.enzyme = df.enzyme.str.replace("_", "")
+    df.experiment = df.experiment.str.replace("_", "")
+    df.metabolite = df.metabolite.str.replace("_", "")
     return df
 
 

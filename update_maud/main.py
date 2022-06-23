@@ -9,7 +9,7 @@ import toml
 from maud.data_model.maud_config import ODEConfig
 
 from .update_model_toml import update_model_toml
-from .update_priors import update_priors
+from .update_priors import update_inits, update_priors
 
 
 def rename_keys(dict_: dict, key_map: dict) -> dict:
@@ -82,14 +82,6 @@ def update_dgf(config, data_path: Path, out_path: Path):
     cov.to_csv(out_path / cov_path, index=False)
 
 
-def copy_unaffected_files(config: dict[str, str], data_path: Path, out_path: Path):
-    """Copy to new location the files that are not affected by the update."""
-    if "user_inits_file" in config:
-        shutil.copy(
-            data_path / config["user_inits_file"], out_path / config["user_inits_file"]
-        )
-
-
 @click.command()
 @click.argument("data_dir", type=click.Path(exists=True, dir_okay=True))
 @click.argument("outdir", type=click.Path(dir_okay=True))
@@ -105,6 +97,8 @@ def cli_entry(data_dir: click.Path, outdir: click.Path):
     new_toml = out_path / config["kinetic_model"]
     old_priors = data_path / config["priors"]
     new_priors = out_path / config["priors"]
+    old_inits = data_path / config["user_inits_file"]
+    new_inits = out_path / config["user_inits_file"]
     measurements_file = config["measurements"]
     bio_config_file = config["biological_config"]
     model = update_model_toml(old_toml, new_toml)
@@ -114,7 +108,9 @@ def cli_entry(data_dir: click.Path, outdir: click.Path):
     update_config(data_path / "config.toml", out_path / "config.toml")
     if "dgf_mean_file" in config:
         update_dgf(config, data_path, out_path)
-    copy_unaffected_files(config, data_path, out_path)
+    update_inits(pd.read_csv(old_inits, index_col=0), model).to_csv(
+        new_inits, index=True
+    )
 
 
 if __name__ == "__main__":
